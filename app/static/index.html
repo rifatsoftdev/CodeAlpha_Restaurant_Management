@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f7f4">
+  <title>Restaurant Manager</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <div id="toast-region" class="toast-region" aria-live="polite"></div>
+
+  <section id="login-screen" class="login-screen hidden">
+    <div class="login-aside">
+      <a class="brand brand-light" href="/"><span class="brand-icon">R</span><span>Root &amp; Table<small>RESTAURANT OPERATIONS</small></span></a>
+      <div class="login-message"><span class="eyebrow">YOUR FLOOR, IN SYNC</span><h1>Good service starts with a clear view.</h1><p>Manage orders, reservations and stock from one calm, connected workspace.</p></div>
+      <div class="login-aside-foot">Restaurant operations, made simple.</div>
+    </div>
+    <div class="login-panel"><div class="login-card"><div class="mobile-brand brand"><span class="brand-icon">R</span><span>Root &amp; Table<small>RESTAURANT OPERATIONS</small></span></div><span class="eyebrow">TEAM ACCESS</span><h2>Welcome back</h2><p class="muted">Sign in with your restaurant account to continue.</p>
+      <form id="login-form" class="form-stack"><label>Username<input id="login-username" name="username" autocomplete="username" required placeholder="Your username"></label><label>Password<input id="login-password" name="password" type="password" autocomplete="current-password" required placeholder="Your password"></label><button class="button button-primary button-wide" type="submit">Sign in <span aria-hidden="true">→</span></button></form>
+      <p class="login-help">Need access? Ask your restaurant administrator.</p>
+    </div></div>
+  </section>
+
+  <div id="app-shell" class="app-shell hidden">
+    <aside id="sidebar" class="sidebar">
+      <a class="brand" href="#dashboard" data-view-link="dashboard"><span class="brand-icon">R</span><span>Root &amp; Table<small>RESTAURANT OPERATIONS</small></span></a>
+      <div class="workspace-label">WORKSPACE</div>
+      <nav class="side-nav" aria-label="Main navigation">
+        <button class="nav-link active" data-view-link="dashboard"><span class="nav-icon">⌂</span>Overview</button>
+        <button class="nav-link" data-view-link="orders"><span class="nav-icon">▤</span>Orders<span id="nav-order-count" class="nav-count hidden">0</span></button>
+        <button class="nav-link" data-view-link="reservations"><span class="nav-icon">◷</span>Reservations</button>
+        <button class="nav-link" data-view-link="menu"><span class="nav-icon">☷</span>Menu</button>
+        <button class="nav-link" data-view-link="inventory"><span class="nav-icon">▦</span>Inventory<span id="nav-stock-count" class="nav-count hidden">0</span></button>
+      </nav>
+      <div class="sidebar-bottom"><div class="sidebar-note"><span class="online-dot"></span><div><strong>System operational</strong><small>All services are connected</small></div></div><button id="logout-button" class="nav-link logout-link"><span class="nav-icon">↪</span>Sign out</button></div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar"><button id="menu-toggle" class="icon-button mobile-menu" aria-label="Toggle navigation">☰</button><div class="breadcrumbs"><span>Workspace</span><span class="crumb-separator">/</span><strong id="page-crumb">Overview</strong></div><div class="topbar-actions"><span id="today-label" class="top-date"></span><span class="top-divider"></span><div class="profile"><span id="avatar-initial" class="avatar">R</span><span><strong id="user-label">Restaurant team</strong><small id="role-label">Team member</small></span></div></div></header>
+
+      <div class="page-wrap">
+        <section id="view-dashboard" class="view active">
+          <div class="page-heading"><div><span class="eyebrow">RESTAURANT OVERVIEW</span><h1 id="welcome-title">Good day</h1><p class="muted">Here’s what’s happening in your restaurant today.</p></div><button class="button button-secondary" data-action="refresh"><span>↻</span> Refresh</button></div>
+          <div class="metric-grid">
+            <article class="metric-card"><div class="metric-top"><span>Today’s sales</span><span class="metric-icon green">৳</span></div><strong id="metric-sales" class="metric-value">—</strong><small id="metric-sales-note">Paid and active orders</small></article>
+            <article class="metric-card"><div class="metric-top"><span>Open orders</span><span class="metric-icon blue">▤</span></div><strong id="metric-orders" class="metric-value">—</strong><small>Orders needing attention</small></article>
+            <article class="metric-card"><div class="metric-top"><span>Reservations</span><span class="metric-icon amber">◷</span></div><strong id="metric-reservations" class="metric-value">—</strong><small>Confirmed bookings</small></article>
+            <article class="metric-card"><div class="metric-top"><span>Stock alerts</span><span class="metric-icon red">!</span></div><strong id="metric-stock" class="metric-value">—</strong><small>Items at or below reorder level</small></article>
+          </div>
+          <div class="dashboard-grid"><section class="panel"><div class="panel-heading"><div><h2>Recent orders</h2><p>Keep service moving smoothly.</p></div><button class="text-button" data-view-link="orders">View all <span>→</span></button></div><div id="dashboard-orders" class="table-scroll"></div></section>
+            <section class="panel"><div class="panel-heading"><div><h2>Quick actions</h2><p>Jump into the next task.</p></div></div><div class="quick-actions"><button data-view-link="orders"><span class="quick-icon green">＋</span><span><strong>Start an order</strong><small>Build a new ticket</small></span><b>→</b></button><button data-view-link="reservations"><span class="quick-icon amber">◷</span><span><strong>Book a table</strong><small>Manage guest bookings</small></span><b>→</b></button><button data-view-link="inventory"><span class="quick-icon blue">▦</span><span><strong>Check inventory</strong><small>Review stock levels</small></span><b>→</b></button></div><div id="dashboard-stock" class="stock-summary"></div><div id="daily-highlights" class="daily-highlights"></div></section>
+          </div>
+        </section>
+
+        <section id="view-orders" class="view">
+          <div class="page-heading"><div><span class="eyebrow">SERVICE</span><h1>Orders</h1><p class="muted">Create tickets and keep every order moving.</p></div><button class="button button-secondary" data-action="refresh"><span>↻</span> Refresh</button></div>
+          <div class="orders-layout"><section class="panel menu-builder"><div class="panel-heading"><div><h2>Build an order</h2><p>Choose items from the menu.</p></div><span id="menu-item-count" class="subtle-pill">0 items</span></div><div class="menu-controls"><input id="menu-search" class="search-input" type="search" placeholder="Search menu items…" aria-label="Search menu"><select id="menu-category" class="select-input" aria-label="Filter menu category"><option value="">All categories</option></select></div><div id="menu-grid" class="menu-grid"></div></section>
+            <section class="panel order-cart"><div class="panel-heading"><div><h2>Current order</h2><p>Review before sending to kitchen.</p></div><button id="clear-cart" class="text-button">Clear</button></div><label class="field-label" for="order-table">Where should this order go?</label><select id="order-table" class="field-control destination-select" required><option value="">Select a table or takeaway…</option></select><p id="order-table-help" class="destination-help">Choose the dining table that should receive this order.</p><label class="field-label" for="order-notes">Kitchen note <span class="muted">(optional)</span></label><textarea id="order-notes" class="field-control" rows="2" maxlength="255" placeholder="Allergies, preferences…"></textarea><div id="cart-lines" class="cart-lines"><div class="empty-inline">Your order is empty. Add an item to get started.</div></div><div class="cart-total"><span>Subtotal</span><strong id="cart-total">৳0.00</strong></div><button id="place-order" class="button button-primary button-wide" disabled>Send order to kitchen <span>→</span></button></section></div>
+          <section class="panel section-gap"><div class="panel-heading"><div><h2>Order queue</h2><p>Update ticket status as the team works.</p></div><select id="order-filter" class="select-input"><option value="">All statuses</option><option value="pending">Pending</option><option value="preparing">Preparing</option><option value="served">Served</option><option value="paid">Paid</option><option value="cancelled">Cancelled</option></select></div><div id="orders-table" class="table-scroll"></div></section>
+        </section>
+
+        <section id="view-reservations" class="view">
+          <div class="page-heading"><div><span class="eyebrow">GUESTS</span><h1>Reservations</h1><p class="muted">Give every guest a warm welcome, right on time.</p></div><button class="button button-secondary" data-action="refresh"><span>↻</span> Refresh</button></div>
+          <div class="reservation-layout"><section class="panel reservation-form-panel"><div class="panel-heading"><div><h2>New reservation</h2><p>We’ll find a suitable table for the party.</p></div><span class="quick-icon amber">◷</span></div><form id="reservation-form" class="form-stack"><label>Guest name<input class="field-control" name="customer_name" required maxlength="100" placeholder="e.g. Samira Rahman"></label><label>Phone number <span class="muted">(optional)</span><input class="field-control" name="phone" maxlength="30" placeholder="+880 1XXX-XXXXXX"></label><div class="form-row"><label>Party size<input class="field-control" name="party_size" type="number" min="1" value="2" required></label><label>Duration<select class="field-control" name="duration_minutes"><option value="60">1 hour</option><option value="90" selected>1.5 hours</option><option value="120">2 hours</option><option value="180">3 hours</option></select></label></div><label>Date &amp; time<input class="field-control" name="start_time" type="datetime-local" required></label><label>Preferred table <span class="muted">(optional)</span><select class="field-control" name="table_id" id="reservation-table"><option value="">Auto-assign best available</option></select></label><button class="button button-primary button-wide" type="submit">Confirm reservation <span>→</span></button></form></section>
+            <section class="panel"><div class="panel-heading"><div><h2>Booking schedule</h2><p>Confirmed and cancelled reservations.</p></div><select id="reservation-filter" class="select-input"><option value="">All reservations</option><option value="confirmed">Confirmed</option><option value="cancelled">Cancelled</option><option value="completed">Completed</option></select></div><div id="reservations-table" class="table-scroll"></div></section></div>
+        </section>
+
+        <section id="view-menu" class="view">
+          <div class="page-heading"><div><span class="eyebrow">CATALOG</span><h1>Menu</h1><p class="muted">Browse what’s available and maintain your catalog.</p></div><button class="button button-secondary" data-action="refresh"><span>↻</span> Refresh</button></div>
+          <section id="menu-admin-panel" class="panel admin-panel hidden"><div class="panel-heading"><div><h2>Add a menu item</h2><p>New items become available immediately.</p></div><span class="admin-badge">ADMIN</span></div><form id="menu-item-form" class="admin-form"><label>Item name<input id="new-menu-name" class="field-control" maxlength="100" required placeholder="e.g. Grilled sea bass"></label><label>Price (BDT)<input id="new-menu-price" class="field-control" type="number" min="0.01" step="0.01" required placeholder="0.00"></label><label>Category<input id="new-menu-category" class="field-control" maxlength="50" value="main" required placeholder="main"></label><label class="wide-field">Description<input id="new-menu-description" class="field-control" maxlength="255" placeholder="A short description for the team"></label><button class="button button-primary" type="submit">＋ Add menu item</button></form></section>
+          <section class="panel"><div class="panel-heading"><div><h2>Menu catalog</h2><p>Available items are ready to order. Admins can manage recipes and availability.</p></div><span id="catalog-count" class="subtle-pill">—</span></div><div class="menu-controls"><input id="catalog-search" class="search-input" type="search" placeholder="Search menu items…" aria-label="Search catalog"><select id="catalog-category" class="select-input"><option value="">All categories</option></select></div><div id="catalog-grid" class="catalog-grid"></div></section>
+          <section id="recipe-editor" class="panel section-gap hidden"><div class="panel-heading"><div><h2>Recipe: <span id="recipe-item-name"></span></h2><p>Set ingredient usage per one portion. Orders deduct these quantities from stock.</p></div><button class="text-button" data-action="close-recipe">Close</button></div><div id="recipe-lines" class="recipe-lines"></div><div class="recipe-actions"><button class="button button-secondary" data-action="add-recipe-line">＋ Add ingredient</button><button id="save-recipe" class="button button-primary">Save recipe</button></div></section>
+        </section>
+
+        <section id="view-inventory" class="view">
+          <div class="page-heading"><div><span class="eyebrow">BACK OF HOUSE</span><h1>Inventory</h1><p class="muted">Stay ahead of low stock and keep the kitchen ready.</p></div><button class="button button-secondary" data-action="refresh"><span>↻</span> Refresh</button></div>
+          <div class="inventory-stats"><article class="mini-stat"><span>Total ingredients</span><strong id="inventory-total">—</strong></article><article class="mini-stat"><span>Needs attention</span><strong id="inventory-low">—</strong></article><article class="mini-stat"><span>Active tables</span><strong id="inventory-tables">—</strong></article></div>
+          <section id="inventory-admin-panel" class="panel admin-panel hidden"><div class="panel-heading"><div><h2>Set up your workspace</h2><p>Add ingredients and dining tables as your restaurant needs them.</p></div><span class="admin-badge">ADMIN</span></div><div class="setup-grid"><form id="inventory-item-form" class="setup-form"><h3>New ingredient</h3><label>Ingredient name<input name="name" class="field-control" required maxlength="100" placeholder="e.g. Basmati rice"></label><div class="form-row"><label>Unit<input name="unit" class="field-control" value="kg" maxlength="20" required placeholder="kg"></label><label>Starting quantity<input name="quantity" class="field-control" type="number" min="0" step="any" value="0" required></label></div><label>Reorder level<input name="reorder_level" class="field-control" type="number" min="0" step="any" value="0" required></label><button class="button button-secondary" type="submit">＋ Add ingredient</button></form><form id="table-item-form" class="setup-form"><h3>New dining table</h3><div class="form-row"><label>Table number<input name="number" class="field-control" type="number" min="1" required placeholder="e.g. 5"></label><label>Seats<input name="capacity" class="field-control" type="number" min="1" required placeholder="e.g. 4"></label></div><p class="form-help">Tables are available for reservations as soon as they’re added.</p><button class="button button-secondary" type="submit">＋ Add table</button></form></div></section>
+          <section class="panel"><div class="panel-heading"><div><h2>Stock levels</h2><p>Restocking updates quantity immediately.</p></div><select id="stock-filter" class="select-input"><option value="">All stock</option><option value="low">Low stock only</option><option value="healthy">Healthy stock</option></select></div><div id="inventory-table" class="table-scroll"></div></section>
+          <section id="staff-admin-panel" class="panel admin-panel section-gap hidden"><div class="panel-heading"><div><h2>Team access</h2><p>Create staff accounts for your restaurant team.</p></div><span class="admin-badge">ADMIN</span></div><div class="staff-layout"><form id="staff-form" class="staff-form"><label>Username<input id="new-staff-username" class="field-control" minlength="3" maxlength="80" required placeholder="e.g. floor-team"></label><label>Temporary password<input id="new-staff-password" type="password" class="field-control" minlength="8" maxlength="128" required placeholder="At least 8 characters"></label><button class="button button-primary" type="submit">＋ Create staff account</button></form><div id="staff-list" class="staff-list"></div></div></section>
+        </section>
+      </div>
+      <footer class="app-footer"><span>Root &amp; Table</span><span>Restaurant operations workspace</span></footer>
+    </main>
+  </div>
+  <script src="/static/app.js" defer></script>
+</body>
+</html>
