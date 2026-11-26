@@ -66,10 +66,14 @@ def current_user(authorization: str = Header(default=""), db: Session = Depends(
 def require_staff(user: User = Depends(current_user)) -> User:
     if user.role not in {"admin", "staff"}:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Staff access required")
+    if user.must_change_password:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Change your temporary password before using restaurant operations")
     return user
 
 
 def require_admin(user: User = Depends(current_user)) -> User:
     if user.role != "admin":
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Admin access required")
+    if user.must_change_password:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Change your temporary password before using restaurant operations")
     return user

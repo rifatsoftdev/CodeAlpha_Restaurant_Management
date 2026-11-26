@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.models import InventoryItem
-from app.schema.schemas import InventoryItemCreate, InventoryItemOut, RestockIn
+from app.schema.schemas import InventoryItemCreate, InventoryItemOut, InventoryItemUpdate, RestockIn
 from app.security import require_admin, require_staff
 from app.services import inventory_service
 
@@ -32,6 +32,22 @@ def create_inventory_item(data: InventoryItemCreate, db: Session = Depends(get_d
     except IntegrityError:
         db.rollback()
         raise HTTPException(409, "Inventory item already exists")
+    db.refresh(item)
+    return item
+
+
+@router.patch("/{item_id}", response_model=InventoryItemOut, dependencies=[Depends(require_admin)])
+def update_inventory_item(item_id: int, data: InventoryItemUpdate, db: Session = Depends(get_db)):
+    item = db.get(InventoryItem, item_id)
+    if not item:
+        raise HTTPException(404, "Inventory item not found")
+    for key, value in data.model_dump(exclude_unset=True).items():
+        setattr(item, key, value)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, "An inventory item with that name already exists")
     db.refresh(item)
     return item
 

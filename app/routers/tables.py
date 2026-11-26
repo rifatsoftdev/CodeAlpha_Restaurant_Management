@@ -6,8 +6,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.models.models import Table
-from app.schema.schemas import TableCreate, TableOut
+from app.models.models import Reservation, ReservationStatus, Table
+from app.schema.schemas import TableCreate, TableOut, TableUpdate
 from app.security import require_admin, require_staff
 from app.services import table_service
 
@@ -40,5 +40,33 @@ def create_table(data: TableCreate, db: Session = Depends(get_db)):
     except IntegrityError:
         db.rollback()
         raise HTTPException(409, "Table number already exists")
+    db.refresh(table)
+    return table
+
+
+@router.patch("/{table_id}", response_model=TableOut, dependencies=[Depends(require_admin)])
+def update_table(table_id: int, data: TableUpdate, db: Session = Depends(get_db)):
+    """Activate/deactivate a table. Confirmed reservations prevent deactivation."""
+    table = db.get(Table, table_id)
+    if not table:
+        raise HTTPException(404, "Table not found")
+
+    if table.is_active and not data.is_active:
+        now = datetime.now()
+        has_reservation = db.scalar(
+            select(Reservation.id).where(
+                Reservation.table_id == table_id,
+                Reservation.status == ReservationStatus.CONFIRMED,
+                Reservation.end_time > now,
+            )
+        )
+        if has_reservation:
+            raise HTTPException(
+                409,
+                "This table has a confirmed reservation. Cancel or move the reservation before taking the table out of service.",
+            )
+
+    table.is_active = data.is_active
+    db.commit()
     db.refresh(table)
     return table

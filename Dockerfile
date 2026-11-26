@@ -1,20 +1,20 @@
-# 1. Use an official Python runtime as a parent image
 FROM python:3.10-slim
 
-# 2. Set the working directory in the container
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DATABASE_URL=sqlite:////data/restaurant.db
+
 WORKDIR /app
 
-# 3. Copy only dependency files first to leverage Docker caching
 COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt \
+    && adduser --disabled-password --gecos "" --uid 10001 appuser
 
-# 4. Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+COPY --chown=appuser:appuser . .
+RUN mkdir -p /data && chown appuser:appuser /data
 
-# 5. Copy the rest of your application code
-COPY . .
+USER appuser
 
-# 6. Make port 3000 available to the world outside this container
 EXPOSE 3000
 
-# 7. Define the command to run your app using CMD
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "3000"]

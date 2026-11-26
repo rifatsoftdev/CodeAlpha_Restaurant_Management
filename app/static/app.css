@@ -1415,3 +1415,8 @@ a {
   cursor:not-allowed
 }
 .destination-select{min-height:45px;border-color:#b8cdbd;background:#f7faf7;color:#274634;font-weight:600}.destination-help{margin:6px 0 12px;color:#89968e;font-size:.67rem;line-height:1.5}
+.menu-form-actions{display:flex;grid-column:1/-1;gap:9px;align-items:center}.catalog-actions{flex-wrap:wrap}
+.table-action.danger:hover{background:#fbefed}
+.password-gate{display:grid;place-items:center;min-height:100vh;padding:24px;background:radial-gradient(circle at top right,#e5efe7 0,#f5f7f4 45%,#f5f7f4 100%)}.password-gate-card{width:min(440px,100%);padding:32px;border:1px solid #e5ebe6;border-radius:14px;background:#fff;box-shadow:var(--shadow)}.password-gate-card h1{margin:8px 0;color:#1c352a;font-family:'Playfair Display',Georgia,serif;font-size:1.9rem}.password-gate-card>p{margin:0 0 22px;font-size:.82rem;line-height:1.6}.password-gate-card label small{color:#98a29d;font-size:.65rem;font-weight:400}.password-signout{display:block;margin:16px auto 0}.staff-chip{display:grid;gap:3px}.staff-chip-note{color:#a47737;font-size:.61rem}
+.reservation-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin-bottom:18px}.reservation-record-filters{display:grid;grid-template-columns:minmax(160px,1fr) minmax(120px,.4fr) minmax(140px,.45fr);gap:9px;margin-bottom:14px}.reservation-record-filters .select-input{width:100%}
+@media(max-width:540px){.reservation-metrics{gap:7px}.reservation-record-filters{grid-template-columns:1fr}.reservation-record-filters .search-input{min-height:40px}}

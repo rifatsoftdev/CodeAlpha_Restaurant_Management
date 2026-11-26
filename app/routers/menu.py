@@ -44,12 +44,17 @@ def create_menu_item(data: MenuItemCreate, db: Session = Depends(get_db)):
 
 @router.patch("/{item_id}", response_model=MenuItemOut, dependencies=[Depends(require_admin)])
 def update_menu_item(item_id: int, data: MenuItemUpdate, db: Session = Depends(get_db)):
+    """Update provided menu fields; omitted values remain unchanged."""
     item = db.get(MenuItem, item_id)
     if not item:
         raise HTTPException(404, "Menu item not found")
     for key, value in data.model_dump(exclude_unset=True).items():
         setattr(item, key, value)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, "A menu item with that name already exists")
     db.refresh(item)
     return item
 

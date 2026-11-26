@@ -46,12 +46,21 @@ async function api(path, options = {}) {
 function showLogin() {
   state.user = null;
   byId('app-shell').classList.add('hidden');
+  byId('password-change-screen').classList.add('hidden');
   byId('login-screen').classList.remove('hidden');
 }
 
 function showApp(user) {
   state.user = user;
+  byId('inventory-edit-panel').classList.add('hidden');
   byId('login-screen').classList.add('hidden');
+  if (user.must_change_password) {
+    byId('app-shell').classList.add('hidden');
+    byId('password-change-username').textContent = user.username;
+    byId('password-change-screen').classList.remove('hidden');
+    return;
+  }
+  byId('password-change-screen').classList.add('hidden');
   byId('app-shell').classList.remove('hidden');
   byId('user-label').textContent = user.username;
   byId('role-label').textContent = user.role;
@@ -61,6 +70,7 @@ function showApp(user) {
   const isAdmin = user.role === 'admin';
   byId('menu-admin-panel').classList.toggle('hidden', !isAdmin);
   byId('inventory-admin-panel').classList.toggle('hidden', !isAdmin);
+  byId('table-management-panel').classList.toggle('hidden', !isAdmin);
   byId('staff-admin-panel').classList.toggle('hidden', !isAdmin);
   loadWorkspace();
 }
@@ -125,8 +135,32 @@ function renderOrders(orders, compact = false) {
 }
 
 function renderReservations() {
-  const filter = byId('reservation-filter').value;
-  const reservations = state.reservations.filter((item) => !filter || item.status === filter);
+  const statusFilter = byId('reservation-filter').value;
+  const dateFilter = byId('reservation-date-filter').value;
+  const search = byId('reservation-search').value.trim().toLowerCase();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const reservations = state.reservations.filter((item) => {
+    const start = new Date(item.start_time);
+    const matchesStatus = !statusFilter || item.status === statusFilter;
+    const matchesSearch = !search || `${item.customer_name} ${item.phone || ''}`.toLowerCase().includes(search);
+    const matchesDate = !dateFilter
+      || (dateFilter === 'today' && start >= today && start < tomorrow)
+      || (dateFilter === 'upcoming' && start >= tomorrow)
+      || (dateFilter === 'past' && start < today);
+    return matchesStatus && matchesSearch && matchesDate;
+  }).sort((a, b) => {
+    const aTime = new Date(a.start_time).getTime();
+    const bTime = new Date(b.start_time).getTime();
+    const now = Date.now();
+    const aUpcoming = aTime >= now;
+    const bUpcoming = bTime >= now;
+    if (aUpcoming !== bUpcoming) return aUpcoming ? -1 : 1;
+    return aUpcoming ? aTime - bTime : bTime - aTime;
+  });
+  byId('reservation-results-count').textContent = `${reservations.length} ${reservations.length === 1 ? 'record' : 'records'}`;
   if (!reservations.length) return emptyState('No reservations to show', 'Bookings will appear here once they are created.');
   const rows = reservations.map((item) => { const table = state.tables.find((entry) => entry.id === item.table_id); return `<tr><td>${esc(item.customer_name)}${item.phone ? `<br><span class="muted">${esc(item.phone)}</span>` : ''}</td><td>${item.party_size}</td><td>Table ${table?.number ?? item.table_id}</td><td>${new Date(item.start_time).toLocaleString('en-BD', { dateStyle: 'medium', timeStyle: 'short' })}<br><span class="muted">Until ${new Date(item.end_time).toLocaleTimeString('en-BD', { timeStyle: 'short' })}</span></td><td>${statusBadge(item.status)}</td><td>${item.status === 'confirmed' ? `<button class="table-action danger" data-cancel-reservation="${item.id}">Cancel</button>` : '—'}</td></tr>`; }).join('');
   return `<table class="data-table"><thead><tr><th>Guest</th><th>Party</th><th>Table</th><th>Time</th><th>Status</th><th>Action</th></tr></thead><tbody>${rows}</tbody></table>`;
@@ -137,7 +171,7 @@ function renderCatalog() {
   const category = byId('catalog-category').value;
   const items = state.menu.filter((item) => (!category || item.category === category) && `${item.name} ${item.description || ''}`.toLowerCase().includes(search));
   byId('catalog-count').textContent = `${items.length} ${items.length === 1 ? 'item' : 'items'}`;
-  byId('catalog-grid').innerHTML = items.length ? items.map((item) => `<article class="catalog-card ${item.is_available ? '' : 'is-unavailable'}"><span class="category-label">${esc(item.category)}</span><h3>${esc(item.name)}</h3><p>${esc(item.description || 'No description added.')}</p><div class="catalog-card-bottom"><span class="menu-price">${money(item.price)}</span><span class="availability ${item.is_available ? '' : 'off'}">${item.is_available ? 'Available' : 'Unavailable'}</span></div>${state.user.role === 'admin' ? `<div class="catalog-actions"><button class="table-action" data-edit-recipe="${item.id}">Recipe (${item.recipe?.length || 0})</button><button class="table-action" data-toggle-menu="${item.id}" data-available="${item.is_available}">${item.is_available ? 'Pause item' : 'Make available'}</button></div>` : ''}</article>`).join('') : emptyState('No menu items found', 'Try changing your search or category.');
+  byId('catalog-grid').innerHTML = items.length ? items.map((item) => `<article class="catalog-card ${item.is_available ? '' : 'is-unavailable'}"><span class="category-label">${esc(item.category)}</span><h3>${esc(item.name)}</h3><p>${esc(item.description || 'No description added.')}</p><div class="catalog-card-bottom"><span class="menu-price">${money(item.price)}</span><span class="availability ${item.is_available ? '' : 'off'}">${item.is_available ? 'Available' : 'Unavailable'}</span></div>${state.user.role === 'admin' ? `<div class="catalog-actions"><button class="table-action" data-edit-menu="${item.id}">Edit item</button><button class="table-action" data-edit-recipe="${item.id}">Recipe (${item.recipe?.length || 0})</button><button class="table-action" data-toggle-menu="${item.id}" data-available="${item.is_available}">${item.is_available ? 'Pause item' : 'Make available'}</button></div>` : ''}</article>`).join('') : emptyState('No menu items found', 'Try changing your search or category.');
 }
 
 function renderInventory() {
@@ -150,9 +184,16 @@ function renderInventory() {
   byId('inventory-tables').textContent = state.tables.filter((table) => table.is_active).length;
   byId('nav-stock-count').textContent = lowCount;
   byId('nav-stock-count').classList.toggle('hidden', !lowCount);
-  byId('inventory-table').innerHTML = items.length ? `<table class="data-table"><thead><tr><th>Ingredient</th><th>In stock</th><th>Reorder at</th><th>Status</th><th>Restock</th></tr></thead><tbody>${items.map((item) => `<tr><td>${esc(item.name)}<br><span class="muted">${esc(item.unit)}</span></td><td>${Number(item.quantity).toLocaleString('en-BD')}</td><td>${Number(item.reorder_level).toLocaleString('en-BD')}</td><td>${item.quantity <= item.reorder_level ? '<span class="status-badge status-cancelled">Low stock</span>' : '<span class="status-badge status-completed">Healthy</span>'}</td><td><div class="restock-control"><input id="restock-${item.id}" type="number" min="0.01" step="any" placeholder="Amount" aria-label="Amount to restock ${esc(item.name)}"><button class="table-action" data-restock="${item.id}">Add</button></div></td></tr>`).join('')}</tbody></table>` : emptyState(filter === 'low' ? 'No low stock items' : 'No inventory items', filter === 'low' ? 'Your current stock is above reorder levels.' : 'Add ingredients to start tracking stock.');
+  byId('inventory-table').innerHTML = items.length ? `<table class="data-table"><thead><tr><th>Ingredient</th><th>In stock</th><th>Reorder at</th><th>Status</th><th>Restock</th>${state.user.role === 'admin' ? '<th>Edit</th>' : ''}</tr></thead><tbody>${items.map((item) => `<tr><td>${esc(item.name)}<br><span class="muted">${esc(item.unit)}</span></td><td>${Number(item.quantity).toLocaleString('en-BD')}</td><td>${Number(item.reorder_level).toLocaleString('en-BD')}</td><td>${item.quantity <= item.reorder_level ? '<span class="status-badge status-cancelled">Low stock</span>' : '<span class="status-badge status-completed">Healthy</span>'}</td><td><div class="restock-control"><input id="restock-${item.id}" type="number" min="0.01" step="any" placeholder="Amount" aria-label="Amount to restock ${esc(item.name)}"><button class="table-action" data-restock="${item.id}">Add</button></div></td>${state.user.role === 'admin' ? `<td><button class="table-action" data-edit-inventory="${item.id}">Edit stock</button></td>` : ''}</tr>`).join('')}</tbody></table>` : emptyState(filter === 'low' ? 'No low stock items' : 'No inventory items', filter === 'low' ? 'Your current stock is above reorder levels.' : 'Add ingredients to start tracking stock.');
   const alerts = state.inventory.filter((item) => item.quantity <= item.reorder_level);
   byId('dashboard-stock').innerHTML = alerts.length ? `<strong>${alerts.length} ingredient${alerts.length === 1 ? '' : 's'} need attention</strong><br>${alerts.slice(0, 3).map((item) => `${esc(item.name)} · ${Number(item.quantity).toLocaleString('en-BD')} ${esc(item.unit)} left`).join('<br>')}` : 'No low stock alerts. Inventory is looking healthy.';
+}
+
+function renderTables() {
+  const tables = [...state.tables].sort((a, b) => a.number - b.number);
+  const activeCount = tables.filter((table) => table.is_active).length;
+  byId('table-status-summary').textContent = `${activeCount} active · ${tables.length - activeCount} out of service`;
+  byId('dining-tables').innerHTML = tables.length ? `<table class="data-table"><thead><tr><th>Table</th><th>Seats</th><th>Status</th><th>Action</th></tr></thead><tbody>${tables.map((table) => `<tr><td>Table ${table.number}</td><td>${table.capacity}</td><td>${table.is_active ? '<span class="status-badge status-completed">Active</span>' : '<span class="status-badge status-cancelled">Out of service</span>'}</td><td><button class="table-action ${table.is_active ? 'danger' : ''}" data-toggle-table="${table.id}" data-active="${table.is_active}">${table.is_active ? 'Take out of service' : 'Restore table'}</button></td></tr>`).join('')}</tbody></table>` : emptyState('No dining tables', 'Add tables above to let the team assign dine-in orders and reservations.');
 }
 
 function renderDashboard() {
@@ -184,11 +225,26 @@ function renderAll() {
   renderCart();
   byId('orders-table').innerHTML = renderOrders(state.orders.filter((order) => !byId('order-filter').value || order.status === byId('order-filter').value));
   byId('reservations-table').innerHTML = renderReservations();
+  renderReservationMetrics();
   renderCatalog();
   renderInventory();
+  renderTables();
   renderDashboard();
   fillTables();
   renderStaff();
+}
+
+function renderReservationMetrics() {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  byId('reservation-total').textContent = state.reservations.length;
+  byId('reservation-today').textContent = state.reservations.filter((item) => {
+    const start = new Date(item.start_time);
+    return start >= today && start < tomorrow;
+  }).length;
+  byId('reservation-upcoming').textContent = state.reservations.filter((item) => item.status === 'confirmed' && new Date(item.start_time) >= tomorrow).length;
 }
 
 function fillTables() {
@@ -202,7 +258,7 @@ function fillTables() {
 }
 
 function renderStaff() {
-  byId('staff-list').innerHTML = state.staff.length ? state.staff.map((user) => `<span class="staff-chip">${esc(user.username)}</span>`).join('') : '<span class="muted">No staff accounts created yet.</span>';
+  byId('staff-list').innerHTML = state.staff.length ? state.staff.map((user) => `<span class="staff-chip">${esc(user.username)}${user.must_change_password ? '<small class="staff-chip-note">Change password at first sign-in</small>' : ''}</span>`).join('') : '<span class="muted">No staff accounts created yet.</span>';
 }
 
 async function loadWorkspace() {
@@ -274,12 +330,86 @@ async function restock(id) {
   catch (error) { toast(error.message, 'error'); }
 }
 
-async function createMenuItem(event) {
+function editInventoryItem(id) {
+  const item = state.inventory.find((entry) => entry.id === id);
+  if (!item) return;
+  byId('inventory-edit-id').value = item.id;
+  byId('inventory-edit-name').value = item.name;
+  byId('inventory-edit-unit').value = item.unit;
+  byId('inventory-edit-quantity').value = item.quantity;
+  byId('inventory-edit-reorder').value = item.reorder_level;
+  byId('inventory-edit-panel').classList.remove('hidden');
+  byId('inventory-edit-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  byId('inventory-edit-name').focus({ preventScroll: true });
+}
+
+function closeInventoryEditor() {
+  byId('inventory-edit-form').reset();
+  byId('inventory-edit-id').value = '';
+  byId('inventory-edit-panel').classList.add('hidden');
+}
+
+async function saveInventoryItem(event) {
   event.preventDefault();
-  const form = event.currentTarget;
-  const payload = { name: byId('new-menu-name').value.trim(), description: byId('new-menu-description').value.trim() || null, price: Number(byId('new-menu-price').value), category: byId('new-menu-category').value.trim(), is_available: true };
-  try { const item = await api('/menu', { method: 'POST', body: JSON.stringify(payload) }); form.reset(); byId('new-menu-category').value = 'main'; toast(`${item.name} added to the menu.`); await loadWorkspace(); }
-  catch (error) { toast(error.message, 'error'); }
+  const id = byId('inventory-edit-id').value;
+  const payload = {
+    name: byId('inventory-edit-name').value.trim(),
+    unit: byId('inventory-edit-unit').value.trim(),
+    quantity: Number(byId('inventory-edit-quantity').value),
+    reorder_level: Number(byId('inventory-edit-reorder').value),
+  };
+  const button = byId('inventory-edit-submit');
+  button.disabled = true;
+  try {
+    await api(`/inventory/${id}`, { method: 'PATCH', body: JSON.stringify(payload) });
+    closeInventoryEditor();
+    toast('Inventory item updated.');
+    await loadWorkspace();
+  } catch (error) { toast(error.message, 'error'); }
+  finally { button.disabled = false; }
+}
+
+function resetMenuForm() {
+  const form = byId('menu-item-form');
+  form.reset();
+  byId('menu-edit-id').value = '';
+  byId('new-menu-category').value = 'main';
+  byId('menu-form-title').textContent = 'Add a menu item';
+  byId('menu-form-description').textContent = 'New items become available immediately.';
+  byId('menu-submit-button').textContent = '＋ Add menu item';
+  byId('menu-cancel-button').classList.add('hidden');
+}
+
+function editMenuItem(id) {
+  const item = state.menu.find((entry) => entry.id === id);
+  if (!item) return;
+  byId('menu-edit-id').value = item.id;
+  byId('new-menu-name').value = item.name;
+  byId('new-menu-price').value = item.price;
+  byId('new-menu-category').value = item.category;
+  byId('new-menu-description').value = item.description || '';
+  byId('menu-form-title').textContent = `Edit ${item.name}`;
+  byId('menu-form-description').textContent = 'Save changes to update this item in the menu.';
+  byId('menu-submit-button').textContent = 'Save changes';
+  byId('menu-cancel-button').classList.remove('hidden');
+  byId('menu-admin-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  byId('new-menu-name').focus({ preventScroll: true });
+}
+
+async function saveMenuItem(event) {
+  event.preventDefault();
+  const editId = byId('menu-edit-id').value;
+  const payload = { name: byId('new-menu-name').value.trim(), description: byId('new-menu-description').value.trim() || null, price: Number(byId('new-menu-price').value), category: byId('new-menu-category').value.trim() };
+  if (!editId) payload.is_available = true;
+  const submit = byId('menu-submit-button');
+  submit.disabled = true;
+  try {
+    const item = await api(editId ? `/menu/${editId}` : '/menu', { method: editId ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
+    resetMenuForm();
+    toast(editId ? `${item.name} updated.` : `${item.name} added to the menu.`);
+    await loadWorkspace();
+  } catch (error) { toast(error.message, 'error'); }
+  finally { submit.disabled = false; }
 }
 
 async function createInventoryItem(event) {
@@ -341,6 +471,14 @@ async function toggleMenuAvailability(id, isAvailable) {
   catch (error) { toast(error.message, 'error'); }
 }
 
+async function toggleTableService(id, isActive) {
+  try {
+    await api(`/tables/${id}`, { method: 'PATCH', body: JSON.stringify({ is_active: !isActive }) });
+    toast(isActive ? 'Table taken out of service.' : 'Table restored to service.');
+    await loadWorkspace();
+  } catch (error) { toast(error.message, 'error'); }
+}
+
 async function login(event) {
   event.preventDefault();
   const button = event.currentTarget.querySelector('button[type="submit"]');
@@ -350,6 +488,29 @@ async function login(event) {
     localStorage.setItem('restaurantToken', result.access_token);
     byId('login-password').value = '';
     showApp(result.user);
+  } catch (error) { toast(error.message, 'error'); }
+  finally { button.disabled = false; }
+}
+
+async function submitPasswordChange(event) {
+  event.preventDefault();
+  const newPassword = byId('new-password').value;
+  if (newPassword !== byId('confirm-password').value) {
+    toast('The new passwords do not match.', 'warning');
+    byId('confirm-password').focus();
+    return;
+  }
+
+  const button = byId('password-change-submit');
+  button.disabled = true;
+  try {
+    const result = await api('/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ current_password: byId('current-password').value, new_password: newPassword }),
+    });
+    byId('password-change-form').reset();
+    showApp(result.user);
+    toast('Password changed. Welcome to the workspace.');
   } catch (error) { toast(error.message, 'error'); }
   finally { button.disabled = false; }
 }
@@ -373,10 +534,16 @@ document.addEventListener('click', async (event) => {
   if (cancel) { await cancelReservation(Number(cancel.dataset.cancelReservation)); return; }
   const stockButton = event.target.closest('[data-restock]');
   if (stockButton) { await restock(Number(stockButton.dataset.restock)); return; }
+  const inventoryEdit = event.target.closest('[data-edit-inventory]');
+  if (inventoryEdit) { editInventoryItem(Number(inventoryEdit.dataset.editInventory)); return; }
   const recipe = event.target.closest('[data-edit-recipe]');
   if (recipe) { openRecipe(Number(recipe.dataset.editRecipe)); return; }
+  const editMenu = event.target.closest('[data-edit-menu]');
+  if (editMenu) { navigate('menu'); editMenuItem(Number(editMenu.dataset.editMenu)); return; }
   const toggle = event.target.closest('[data-toggle-menu]');
   if (toggle) { await toggleMenuAvailability(Number(toggle.dataset.toggleMenu), toggle.dataset.available === 'true'); return; }
+  const tableToggle = event.target.closest('[data-toggle-table]');
+  if (tableToggle) { await toggleTableService(Number(tableToggle.dataset.toggleTable), tableToggle.dataset.active === 'true'); return; }
   const action = event.target.closest('[data-action]')?.dataset.action;
   if (action === 'refresh') { await loadWorkspace(); toast('Workspace refreshed.'); }
   if (action === 'add-recipe-line') addRecipeLine();
@@ -385,11 +552,14 @@ document.addEventListener('click', async (event) => {
 });
 
 byId('login-form').addEventListener('submit', login);
+byId('password-change-form').addEventListener('submit', submitPasswordChange);
+byId('password-change-logout').addEventListener('click', logout);
 byId('logout-button').addEventListener('click', logout);
 byId('place-order').addEventListener('click', submitOrder);
 byId('clear-cart').addEventListener('click', () => { cart.clear(); renderCart(); });
 byId('reservation-form').addEventListener('submit', submitReservation);
-byId('menu-item-form').addEventListener('submit', createMenuItem);
+byId('menu-item-form').addEventListener('submit', saveMenuItem);
+byId('menu-cancel-button').addEventListener('click', resetMenuForm);
 byId('inventory-item-form').addEventListener('submit', createInventoryItem);
 byId('table-item-form').addEventListener('submit', createTable);
 byId('staff-form').addEventListener('submit', createStaff);
@@ -400,7 +570,11 @@ byId('catalog-search').addEventListener('input', renderCatalog);
 byId('catalog-category').addEventListener('change', renderCatalog);
   byId('order-filter').addEventListener('change', () => { byId('orders-table').innerHTML = renderOrders(state.orders.filter((order) => !byId('order-filter').value || order.status === byId('order-filter').value)); });
 byId('reservation-filter').addEventListener('change', () => { byId('reservations-table').innerHTML = renderReservations(); });
+byId('reservation-date-filter').addEventListener('change', () => { byId('reservations-table').innerHTML = renderReservations(); });
+byId('reservation-search').addEventListener('input', () => { byId('reservations-table').innerHTML = renderReservations(); });
 byId('stock-filter').addEventListener('change', renderInventory);
+byId('inventory-edit-form').addEventListener('submit', saveInventoryItem);
+byId('inventory-edit-cancel').addEventListener('click', closeInventoryEditor);
 byId('menu-toggle').addEventListener('click', () => byId('sidebar').classList.toggle('open'));
 
 async function restoreSession() {

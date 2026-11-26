@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.models.models import OrderStatus, ReservationStatus
 
@@ -17,12 +17,43 @@ class InventoryItemCreate(BaseModel):
     reorder_level: float = Field(0, ge=0)
 
 
+class InventoryItemUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    unit: str | None = Field(default=None, min_length=1, max_length=20)
+    quantity: float | None = Field(default=None, ge=0)
+    reorder_level: float | None = Field(default=None, ge=0)
+
+    @field_validator("name", "unit")
+    @classmethod
+    def trim_inventory_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        if not value:
+            raise ValueError("This field cannot be blank")
+        return value
+
+    @model_validator(mode="after")
+    def validate_inventory_patch(self):
+        null_fields = [field for field in self.model_fields_set if getattr(self, field) is None]
+        if null_fields:
+            raise ValueError(f"Fields cannot be null: {', '.join(sorted(null_fields))}")
+        if not self.model_fields_set:
+            raise ValueError("Provide at least one field to update")
+        return self
+
+
 class InventoryItemOut(ORMModel, InventoryItemCreate):
     id: int
 
 
 class RestockIn(BaseModel):
     quantity: float = Field(gt=0)
+
+
+class PasswordChange(BaseModel):
+    current_password: str = Field(min_length=1, max_length=128)
+    new_password: str = Field(min_length=8, max_length=128)
 
 
 # ---------- Menu ----------
@@ -36,19 +67,47 @@ class RecipeIngredientOut(ORMModel, RecipeIngredientIn):
 
 
 class MenuItemCreate(BaseModel):
-    name: str
-    description: str | None = None
+    name: str = Field(min_length=1, max_length=100)
+    description: str | None = Field(default=None, max_length=255)
     price: float = Field(gt=0)
-    category: str = "main"
+    category: str = Field(default="main", min_length=1, max_length=50)
     is_available: bool = True
+
+    @field_validator("name", "category")
+    @classmethod
+    def trim_required_text(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("This field cannot be blank")
+        return value
 
 
 class MenuItemUpdate(BaseModel):
-    name: str | None = None
-    description: str | None = None
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    description: str | None = Field(default=None, max_length=255)
     price: float | None = Field(default=None, gt=0)
-    category: str | None = None
+    category: str | None = Field(default=None, min_length=1, max_length=50)
     is_available: bool | None = None
+
+    @field_validator("name", "category")
+    @classmethod
+    def trim_required_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        if not value:
+            raise ValueError("This field cannot be blank")
+        return value
+
+    @model_validator(mode="after")
+    def validate_patch_fields(self):
+        required_fields = {"name", "price", "category", "is_available"}
+        null_fields = [field for field in required_fields if field in self.model_fields_set and getattr(self, field) is None]
+        if null_fields:
+            raise ValueError(f"Fields cannot be null: {', '.join(sorted(null_fields))}")
+        if not self.model_fields_set:
+            raise ValueError("Provide at least one field to update")
+        return self
 
 
 class MenuItemOut(ORMModel, MenuItemCreate):
@@ -60,6 +119,10 @@ class MenuItemOut(ORMModel, MenuItemCreate):
 class TableCreate(BaseModel):
     number: int = Field(gt=0)
     capacity: int = Field(gt=0)
+
+
+class TableUpdate(BaseModel):
+    is_active: bool
 
 
 class TableOut(ORMModel, TableCreate):

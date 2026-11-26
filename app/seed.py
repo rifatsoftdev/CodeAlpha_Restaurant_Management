@@ -1,10 +1,10 @@
 """Load sample data:  python -m app.seed"""
 from app.models import models
-from app.core.database import Base, SessionLocal, engine
+from app.core.database import SessionLocal, initialize_database
 
 
 def run() -> None:
-    Base.metadata.create_all(bind=engine)
+    initialize_database()
     db = SessionLocal()
     if db.query(models.MenuItem).first():
         print("Database already has data - skipping seed.")

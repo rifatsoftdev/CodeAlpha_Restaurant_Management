@@ -11,13 +11,13 @@ if __package__ in {None, ""}:
 
 from sqlalchemy import select
 
-from app.core.database import Base, SessionLocal, engine
+from app.core.database import SessionLocal, initialize_database
 from app.models.models import User
 from app.security import hash_password
 
 
 def main() -> None:
-    Base.metadata.create_all(bind=engine)
+    initialize_database()
 
     username = input("Admin username: ").strip()
     password = getpass("Admin password (minimum 8 characters): ")

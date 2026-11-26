@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.models import User
+from app.schema.schemas import PasswordChange
 from app.security import create_token, current_user, hash_password, require_admin, verify_password
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -32,7 +33,7 @@ class StaffCreate(BaseModel):
 
 
 def user_data(user: User):
-    return {"id": user.id, "username": user.username, "role": user.role}
+    return {"id": user.id, "username": user.username, "role": user.role, "must_change_password": user.must_change_password}
 
 
 @router.post("/login")
@@ -53,9 +54,28 @@ def me(user: User = Depends(current_user)):
     return user_data(user)
 
 
+@router.post("/change-password")
+def change_password(data: PasswordChange, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    if not verify_password(data.current_password, user.password_hash):
+        raise HTTPException(400, "Current password is incorrect")
+    if verify_password(data.new_password, user.password_hash):
+        raise HTTPException(400, "Choose a password different from your current password")
+
+    user.password_hash = hash_password(data.new_password)
+    user.must_change_password = False
+    db.commit()
+    db.refresh(user)
+    return {"status": "ok", "user": user_data(user)}
+
+
 @router.post("/staff", status_code=201)
 def create_staff(data: StaffCreate, db: Session = Depends(get_db), _admin: User = Depends(require_admin)):
-    user = User(username=data.username.strip(), password_hash=hash_password(data.password), role="staff")
+    user = User(
+        username=data.username.strip(),
+        password_hash=hash_password(data.password),
+        role="staff",
+        must_change_password=True,
+    )
     db.add(user)
     try:
         db.commit()

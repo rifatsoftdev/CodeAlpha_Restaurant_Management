@@ -6,13 +6,13 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.models import models  # noqa: F401  (registers tables with SQLAlchemy)
-from app.core.database import Base, engine
+from app.core.database import initialize_database
 from app.routers import auth, inventory, menu, orders, reports, reservations, tables
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)  # swap for Alembic migrations later
+    initialize_database()  # use Alembic migrations when the schema grows further
     yield
 
 
